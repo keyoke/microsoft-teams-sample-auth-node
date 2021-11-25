@@ -29,6 +29,7 @@ const CHOICE_PROMPT = "ChoicePrompt";
 const OAUTH_PROMPT = "OAuthPrompt";
 const MAIN_WATERFALL_DIALOG = "MainWaterfallDialog";
 const SHOWPROFILE_FLOW = "ShowProfileFlow";
+const SHOWTOKEN_FLOW = "ShowTokenFlow";
 const SIGNIN_FLOW = "SigninFlow";
 const SIGNOUT_FLOW = "SignoutFlow";
 const MAINLOOP_FLOW = "MainLoopFlow";
@@ -50,8 +51,6 @@ export abstract class IdentityProviderDialog extends dialogs.ComponentDialog {
         this.addDialog(new dialogs.ChoicePrompt(CHOICE_PROMPT));
         this.addDialog(new dialogs.WaterfallDialog(MAIN_WATERFALL_DIALOG, [
             this.getTokenStep.bind(this),
-            this.showToken.bind(this),
-            //this.showProfileStep.bind(this),
             this.restartMainLoopStep.bind(this),
         ]));
         this.addDialog(new dialogs.WaterfallDialog(MAINLOOP_FLOW, [
@@ -61,17 +60,18 @@ export abstract class IdentityProviderDialog extends dialogs.ComponentDialog {
         ]));
         this.addDialog(new dialogs.WaterfallDialog(SHOWPROFILE_FLOW, [
             this.getTokenStep.bind(this),
+            this.showProfileStep.bind(this),
+        ]));
+        this.addDialog(new dialogs.WaterfallDialog(SHOWTOKEN_FLOW, [
+            this.getTokenStep.bind(this),
             this.showToken.bind(this),
-            //this.showProfileStep.bind(this),
         ]));
         this.addDialog(new dialogs.WaterfallDialog(SIGNOUT_FLOW, [
             this.signOutStep.bind(this),
         ]));
         this.addDialog(new dialogs.WaterfallDialog(SIGNIN_FLOW, [
             this.signOutStep.bind(this),
-            this.getTokenStep.bind(this),
-            this.showToken.bind(this),
-            //this.showProfileStep.bind(this),
+            this.getTokenStep.bind(this)
         ]));
 
         this.initialDialogId = MAIN_WATERFALL_DIALOG;
@@ -130,7 +130,7 @@ export abstract class IdentityProviderDialog extends dialogs.ComponentDialog {
 
         let choices = [];
         if (tokenResponse && tokenResponse.token) {
-            choices = [ "Show profile", "Sign out", "Back" ];
+            choices = [ "Show profile", "Show token", "Sign out", "Back" ];
         } else {
             choices = [ "Sign in", "Back" ];
         }
@@ -145,6 +145,9 @@ export abstract class IdentityProviderDialog extends dialogs.ComponentDialog {
         switch (choice) {
             case "Show profile":
                 return await stepContext.beginDialog(SHOWPROFILE_FLOW);
+
+            case "Show token":
+                return await stepContext.beginDialog(SHOWTOKEN_FLOW);
 
             case "Sign out":
                 return await stepContext.beginDialog(SIGNOUT_FLOW);
