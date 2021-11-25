@@ -23,6 +23,7 @@
 
 import * as builder from "botbuilder";
 import * as dialogs from "botbuilder-dialogs";
+import * as jwt from "jsonwebtoken";
 
 const CHOICE_PROMPT = "ChoicePrompt";
 const OAUTH_PROMPT = "OAuthPrompt";
@@ -49,7 +50,8 @@ export abstract class IdentityProviderDialog extends dialogs.ComponentDialog {
         this.addDialog(new dialogs.ChoicePrompt(CHOICE_PROMPT));
         this.addDialog(new dialogs.WaterfallDialog(MAIN_WATERFALL_DIALOG, [
             this.getTokenStep.bind(this),
-            this.showProfileStep.bind(this),
+            this.showToken.bind(this),
+            //this.showProfileStep.bind(this),
             this.restartMainLoopStep.bind(this),
         ]));
         this.addDialog(new dialogs.WaterfallDialog(MAINLOOP_FLOW, [
@@ -59,7 +61,8 @@ export abstract class IdentityProviderDialog extends dialogs.ComponentDialog {
         ]));
         this.addDialog(new dialogs.WaterfallDialog(SHOWPROFILE_FLOW, [
             this.getTokenStep.bind(this),
-            this.showProfileStep.bind(this),
+            this.showToken.bind(this),
+            //this.showProfileStep.bind(this),
         ]));
         this.addDialog(new dialogs.WaterfallDialog(SIGNOUT_FLOW, [
             this.signOutStep.bind(this),
@@ -67,7 +70,8 @@ export abstract class IdentityProviderDialog extends dialogs.ComponentDialog {
         this.addDialog(new dialogs.WaterfallDialog(SIGNIN_FLOW, [
             this.signOutStep.bind(this),
             this.getTokenStep.bind(this),
-            this.showProfileStep.bind(this),
+            this.showToken.bind(this),
+            //this.showProfileStep.bind(this),
         ]));
 
         this.initialDialogId = MAIN_WATERFALL_DIALOG;
@@ -89,11 +93,23 @@ export abstract class IdentityProviderDialog extends dialogs.ComponentDialog {
 
     protected abstract async getProfileCard(accessToken: string): Promise<builder.Attachment>;
 
+    protected async showToken(stepContext: dialogs.WaterfallStepContext) {
+        const tokenResponse: builder.TokenResponse = stepContext.result;
+        if (tokenResponse) {
+            const decodedToken = jwt.decode(tokenResponse.token, { complete: true });
+            await stepContext.context.sendActivity(JSON.stringify(decodedToken));
+            return await stepContext.next();
+        } else {
+            await stepContext.context.sendActivity("Please sign in so I can show you your token.");
+            return await stepContext.replaceDialog(MAIN_WATERFALL_DIALOG);
+        }
+    }
+
     protected async showProfileStep(stepContext: dialogs.WaterfallStepContext) {
         const tokenResponse: builder.TokenResponse = stepContext.result;
         if (tokenResponse) {
             const card = await this.getProfileCard(tokenResponse.token);
-            await stepContext.context.sendActivity({ 
+            await stepContext.context.sendActivity({
                 text: `Here's your profile in ${this.displayName}`,
                 attachments: [ card ],
             });

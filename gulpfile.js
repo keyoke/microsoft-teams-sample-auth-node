@@ -32,9 +32,7 @@ var staticFiles = ['**/*.json', '**/*.hbs'];
  */
 gulp.task('clean', function () {
     return del([
-        'build/**/*',
-        // Azure doesn't like it when we delete build/src
-        '!build/src'
+        'build/**/*'
     ]);
 });
 
@@ -117,7 +115,7 @@ gulp.task('package', gulp.series('rebuild', function () {
 }));
 
 gulp.task('server:start', gulp.series('build', function() {
-    server.listen({path: 'app.js', cwd: 'build/src'}, function(error) {
+    server.listen({path: 'app.js', cwd: 'build'}, function(error) {
         console.error(error);
     });
 }));

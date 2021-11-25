@@ -6,9 +6,11 @@
     "preserveConstEnums": true,
     "noUnusedLocals": true,
     "sourceMap": true,
+    "moduleResolution": "node",
     "target": "es6",
-    "lib": [      
-      "esnext.asynciterable"
+    "lib": [
+      "esnext.asynciterable",
+      "dom"
     ],
     "outDir": "build",
     "types": [ "node" ]

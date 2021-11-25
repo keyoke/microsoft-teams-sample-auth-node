@@ -28,6 +28,8 @@ let bodyParser = require("body-parser");
 let favicon = require("serve-favicon");
 let http = require("http");
 let path = require("path");
+import * as qs from 'querystring';
+import * as axios from 'axios';
 import * as builder from "botbuilder";
 import * as config from "config";
 import * as apis from "./apis";
@@ -40,11 +42,13 @@ import { GoogleDialog } from "./dialogs/GoogleDialog";
 
 let app = express();
 let appId = config.get("app.appId");
+const client : axios.AxiosStatic = axios.default;
 
 app.set("port", process.env.PORT || 3978);
 app.use(express.static(path.join(__dirname, "../public")));
 app.use(favicon(path.join(__dirname, "../public/assets", "favicon.ico")));
 app.use(bodyParser.json());
+app.use(express.urlencoded({ limit: "250mb", extended: true, parameterLimit: 50000 }));
 
 let handlebars = exphbs.create({
     extname: ".hbs",
@@ -114,6 +118,66 @@ app.get("/api/getProfilesFromBot", validateAzureADToken, async (req, res) => {
 app.get("/ping", (req, res) => {
     res.status(200).send("OK");
 });
+
+
+app.get("/api/oauth/authorize", (req, res) => {
+    let response_type : string = req.query.response_type.toString();
+    let client_id: string = req.query.client_id.toString();
+    let state: string = req.query.state.toString();
+    let redirect_uri: string = req.query.redirect_uri.toString();
+    let scope: string = req.query.scope.toString();
+
+    if (!state)
+    {
+        res.sendStatus(400, "Authorize request missing parameter 'state'");
+    }
+
+    if (!redirect_uri)
+    {
+        res.sendStatus(400, "Authorize request missing parameter 'redirect_uri'");
+    }
+
+
+    res.redirect(`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${client_id}&response_type=${response_type}&redirect_uri=${redirect_uri}&scope=${scope}&state=${state}`);
+});
+
+app.post("/api/oauth/token", (req, res) => {
+    let authorizationCode  : string = req.body.code.toString();
+    let grantType : string = req.body.grant_type.toString();
+    let clientId : string = req.body.client_id.toString();
+    let clientSecret : string = req.body.client_secret.toString();
+    let redirectUri: string = req.body.redirect_uri.toString();
+
+    client.post('https://login.microsoftonline.com/common/oauth2/v2.0/token', qs.stringify({
+      client_id: `${clientId}`,
+      client_secret: `${clientSecret}`,
+      redirect_uri: `${redirectUri}`,
+      grant_type: `${grantType}`,
+      code: `${authorizationCode}`
+    }),
+    {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    })
+    .then((response) => {
+        console.dir(response.data);
+        res.json({
+            //access_token : response.data.access_token,
+            id_token : response.data.id_token,
+            expires_in: response.data.expires_in
+        });
+    })
+    .catch((error) => {
+      logger.error(error);
+      // relay the response
+      if( error.response ){
+        res.sendStatus(error.response.status);
+      }
+    });
+});
+
 
 // error handlers
 
